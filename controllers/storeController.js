@@ -43,6 +43,7 @@ const fetchAllFiles = async (req, res) => {
                         mimeType: item.mimeType,
                         webContentLink: item.webContentLink,
                         size: item.size,
+                        parents: item.parents
                     };
                 }
             }
@@ -61,6 +62,7 @@ const fetchAllFiles = async (req, res) => {
                     mimeType: item.mimeType,
                     webContentLink: item.webContentLink,
                     size: item.size,
+                    parents: item.parents
                 };
             }
         }
