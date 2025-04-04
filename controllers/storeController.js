@@ -29,44 +29,31 @@ const fetchAllFiles = async (req, res) => {
     await oauth2Client.refreshAccessToken();
     const drive = google.drive({ version: "v3", auth: oauth2Client });
     const rootFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-
+    const structure = [];
     async function processFolder(folderId) {
       const filesAndFolders = await listFilesInFolder(folderId, drive);
-      const structure = {
-        id: folderId,
-        contents: {},
-      };
-
       for (const item of filesAndFolders) {
         if (item.mimeType === "application/vnd.google-apps.folder") {
-          structure.contents[item.name] = await processFolder(item.id);
+          structure.push({
+            name: item.name,
+            id: item.id,
+            parent: (folderId === rootFolderId)?"root":folderId,
+          })
+          await processFolder(item.id);
         } else {
-          structure.contents[item.name] = {
+          structure.push({
+            name: item.name,
             id: item.id,
             webContentLink: item.webContentLink,
             size: item.size,
-            parents: item.parents,
-          };
+            parent: (folderId === rootFolderId)?"root":folderId,
+          })
         }
       }
       return structure;
     }
 
-    const topLevelFilesAndFolders = await listFilesInFolder(rootFolderId, drive);
-    const finalStructure = {};
-
-    for (const item of topLevelFilesAndFolders) {
-      if (item.mimeType === "application/vnd.google-apps.folder") {
-        finalStructure[item.name] = await processFolder(item.id);
-      } else {
-        finalStructure[item.name] = {
-          id: item.id,
-          webContentLink: item.webContentLink,
-          size: item.size,
-          parents: item.parents,
-        };
-      }
-    }
+    const finalStructure = await processFolder(rootFolderId);
 
     res.json(finalStructure);
   } catch (error) {
@@ -75,7 +62,7 @@ const fetchAllFiles = async (req, res) => {
   }
 };
 
-const fetchDirectory = async (req, res) => {
+const fetchFiles = async (req,res) => {
   try {
     const FOLDER_ID = req.body.folderId;
     if (!FOLDER_ID) {
@@ -85,22 +72,24 @@ const fetchDirectory = async (req, res) => {
     const drive = google.drive({ version: "v3", auth: oauth2Client });
     const rootFolderId = FOLDER_ID === "root" ? process.env.GOOGLE_DRIVE_FOLDER_ID : FOLDER_ID;
 
-    const topLevelFilesAndFolders = await listFilesInFolder(rootFolderId, drive);
-    const finalStructure = {};
+    const currentFolder = await listFilesInFolder(rootFolderId, drive);
+    const finalStructure = [];
 
-    for (const item of topLevelFilesAndFolders) {
+    for (const item of currentFolder) {
       if (item.mimeType === "application/vnd.google-apps.folder") {
-        finalStructure[item.name] = {
+        finalStructure.push({
+          name: item.name,
           id: item.id,
-          contents: {},
-        };
+          parent: FOLDER_ID,
+        });
       } else {
-        finalStructure[item.name] = {
+        finalStructure.push({
+          name: item.name,
           id: item.id,
           webContentLink: item.webContentLink,
           size: item.size,
-          parents: item.parents,
-        };
+          parent: FOLDER_ID === "root" ? "root" : item.parents[0],
+        });
       }
     }
 
@@ -113,5 +102,5 @@ const fetchDirectory = async (req, res) => {
 
 module.exports = {
   fetchAllFiles,
-  fetchDirectory,
+  fetchFiles
 };

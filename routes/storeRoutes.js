@@ -1,8 +1,8 @@
 const storeRoutes = require('express').Router();
 
-const { fetchAllFiles, fetchDirectory } = require('../controllers/storeController');
+const { fetchAllFiles, fetchFiles } = require('../controllers/storeController');
 
 storeRoutes.get("/fetchall",fetchAllFiles);
-storeRoutes.post("/fetchdir",fetchDirectory);
+storeRoutes.post("/fetchFiles", fetchFiles);
 
 module.exports = storeRoutes;
